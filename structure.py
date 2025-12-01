@@ -20,11 +20,16 @@ F_load = 200.0     # Force ponctuelle (N) - vers le bas
 q_load = -15.0     # Force linéique (N/m) - vers le haut (donc négatif)
 
 ##Données pour le flambage local
-# Ces listes permettent de calculer le coefficient k pour le "crippling" (voilement)
-from Sources.Data_k_bh import bh, k
-
-bh_data = bh
-k_data = k
+# NOTE : Assurez-vous que le dossier "Sources" et le fichier "Data_k_bh.py" existent bien.
+try:
+    from Sources.Data_k_bh import bh, k
+    bh_data = bh
+    k_data = k
+except ImportError:
+    # Valeurs de secours pour éviter que le code ne plante si le fichier manque
+    print("! ATTENTION : Module Sources.Data_k_bh introuvable. Utilisation de valeurs par défaut.")
+    bh_data = [0, 100]
+    k_data = [4, 4]
 
 # Création de la fonction d'interpolation linéaire
 get_k_factor = interp1d(bh_data, k_data, kind='linear', fill_value="extrapolate")
@@ -54,9 +59,6 @@ def calcul_poutre_console_superposition(x_array, L, a, F, q, E, I):
     M_tot = np.zeros_like(x_array)
 
     # --- Cas 1 : Charge répartie q (C01) ---
-    # Formules du cours (avec Q = q*L)
-    # M(x) = -q/2 * (L-x)^2
-    # y(x) = (q / 24EI) * x^2 * (x^2 - 4Lx + 6L^2)
     M_q = -(q / 2) * (L - x_array)**2
     y_q = (q / (24 * E * I *L)) * x_array**2 * (x_array**2 - 4*L*x_array + 6*L**2)
 
@@ -86,6 +88,7 @@ def calcul_force_critique(L, E, I, S, nu, b, h, e):
     # 1. Flambage Global (Euler) - Hypothèse Bi-encastré K=0.5
     K = 0.5
     L_eq = K * L
+    if L_eq == 0: L_eq = 0.001 # Sécurité division par zero
     F_euler = (np.pi**2 * E * I) / (L_eq**2)
 
     # 2. Voilement Local (Crippling)
@@ -145,23 +148,7 @@ print(f"   - Moment Fléchissant Max : {abs(M_res[idx_max_M]):.2f} N.m (à x={x_
 print(f"   - Flèche Maximale (bout) : {abs(y_res[idx_max_y])*1000:.2f} mm (à x={x_vals[idx_max_y]:.2f} m)")
 print("-" * 50)
 
-# Graphique Flexion
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-# Moment
-ax1.plot(x_vals, M_res, 'r-', linewidth=2)
-ax1.fill_between(x_vals, M_res, 0, color='r', alpha=0.1)
-ax1.set_title('Diagramme du Moment Fléchissant $M_f(x)$')
-ax1.set_ylabel('Moment (N.m)')
-ax1.grid(True)
-# Déformée
-ax2.plot(x_vals, y_res * 1000, 'b-', linewidth=2) # Conversion en mm
-ax2.set_title('Déformée de la poutre $y(x)$')
-ax2.set_xlabel('Position x (m)')
-ax2.set_ylabel('Flèche (mm)')
-ax2.invert_yaxis() # Flèche positive vers le bas
-ax2.grid(True)
-plt.tight_layout()
-plt.show()
+# NOTE : J'ai supprimé l'affichage graphique ici pour le mettre à la fin
 
 #PARTIE 3 : FLAMBAGE (EXERCICE 4)
 print(f"3. ANALYSE DU FLAMBAGE (Euler vs Crippling vs Johnson)")
@@ -174,7 +161,7 @@ for L_test in longueurs_test:
     print(f"      Élancement = {lam:.2f}")
     print(f"      Mode de ruine dominant : {mode_ruine}")
 
-#PARTIE 4 : GRAPHIQUE ÉVOLUTION FLAMBAGE
+#PARTIE 4 : CALCUL DES DONNÉES GRAPHIQUE FLAMBAGE
 # Calcul sur une plage de longueurs
 l_range = np.linspace(0.1, 5.0, 100)
 forces_critiques = []
@@ -191,13 +178,33 @@ for l in l_range:
     forces_critiques.append(f_cr)
     elancements.append(lam)
 
-plt.figure(figsize=(10, 6))
-plt.plot(elancements, forces_critiques, 'g-', linewidth=2, label='Force Critique Réelle')
-plt.axvline(x=lambda_crit, color='k', linestyle='--', label=rf'Transition Johnson/Euler ($\lambda$={lambda_crit:.1f})')
 
-plt.title("Evolution de la Force Critique de Flambage en fonction de l'élancement")
-plt.xlabel(r"Élancement $\lambda$")
-plt.ylabel("Force Critique (N)")
-plt.legend()
-plt.grid(True)
+# --- PARTIE FINALE : AFFICHAGE DES 3 GRAPHIQUES ---
+
+fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), constrained_layout=True)
+
+# Graphique 1 : Moment
+ax1.plot(x_vals, M_res, 'r-', linewidth=2)
+ax1.fill_between(x_vals, M_res, 0, color='r', alpha=0.1)
+ax1.set_title('1. Diagramme du Moment Fléchissant $M_f(x)$')
+ax1.set_ylabel('Moment (N.m)')
+ax1.grid(True)
+
+# Graphique 2 : Déformée
+ax2.plot(x_vals, y_res * 1000, 'b-', linewidth=2) # Conversion en mm
+ax2.set_title('2. Déformée de la poutre $y(x)$')
+ax2.set_xlabel('Position x (m)')
+ax2.set_ylabel('Flèche (mm)')
+ax2.invert_yaxis() # Flèche positive vers le bas
+ax2.grid(True)
+
+# Graphique 3 : Flambage
+ax3.plot(elancements, forces_critiques, 'g-', linewidth=2, label='Force Critique Réelle')
+ax3.axvline(x=lambda_crit, color='k', linestyle='--', label=rf'Transition Johnson/Euler ($\lambda$={lambda_crit:.1f})')
+ax3.set_title("3. Evolution de la Force Critique de Flambage")
+ax3.set_xlabel(r"Élancement $\lambda$")
+ax3.set_ylabel("Force Critique (N)")
+ax3.legend()
+ax3.grid(True)
+
 plt.show()
