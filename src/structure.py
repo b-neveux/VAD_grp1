@@ -141,16 +141,22 @@ def optimisation_section (L, F, E, nu):
 
 
 ##Calcul masse
-def calcul_masse_aile ( envergure , corde , e_eq , rho):
+def calcul_masse_aile_leclerc ( MTOW , S , b , epsilon , phi_25_rad , e_r ) :
     """
-    Calcule la masse estim ée d’une aile .
-    e_eq : É paisseur é quivalente (m)
-    rho : Densit é du maté riau (kg/m ^3)
+    Calcule la masse de l ’ aile selon la formule de F . Leclerc (2002) .
+    Source : Cours ECL Bilan de Masse , Page 26.
     """
-    S_ref = envergure * corde
-    vol_matiere = 2 * S_ref * e_eq
-    masse = vol_matiere * rho
-    return masse
+    # Allongement ( Aspect Ratio ) lambda = b ^2 / S
+    lamb = b **2 / S
+
+    # Terme principal de l ’é quation
+    term_1 = ( MTOW * lamb * ( epsilon + 1) ) / ( e_r * np . cos ( phi_25_rad ) )
+
+    # Calcul final
+    Mw = 0.197 * ( term_1 **0.6) * ( S **0.3)
+
+    return Mw
+
 ##Exécution et affichage
 
 print("RAPPORT DE LA STRUCTURE AVION \n")
