@@ -34,7 +34,7 @@ VAD_grp1/
 │       └── Aircraft_Data.xlsx
 │
 ├── models/
-│   └── Projet_v1.xfl            # Modèle XFLR5 de l’aéronef
+│   └── XFLR5_tests.xfl          # Modèle XFLR5 de l’aéronef
 │
 ├── docs/
 │   ├── VAD_rapport_intermediaire.pdf
