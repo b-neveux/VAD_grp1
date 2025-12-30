@@ -12,7 +12,7 @@ sys.path.append(os.path.join(current_dir, 'data'))
 
 ## Données pour le flambage local
 try:
-    from Data_k_bh import bh, k
+    from data.Data_k_bh import bh, k
     bh_data = bh
     k_data = k
 except ImportError:
